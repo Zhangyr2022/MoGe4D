@@ -380,7 +380,7 @@ class WanFunControlPipeline(DiffusionPipeline):
         frames = frames.cpu().float().numpy()
         return frames
     def decode_latents_no_normalize(self, latents: torch.Tensor) -> torch.Tensor:
-        frames = self.vae.decode(latents.to(self.vae.dtype)).sample
+        frames = self.vae.decode(latents.to(self.vae.dtype),use_traj_norm=True).sample
         # we always cast to float32 as this does not cause significant overhead and is compatible with bfloa16
         frames = frames.cpu().float().numpy()
         return frames
