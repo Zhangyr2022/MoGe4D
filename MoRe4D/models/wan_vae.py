@@ -517,12 +517,15 @@ class AutoencoderKLWan_(nn.Module):
         x_recon = self.decode(z)
         return x_recon, mu, log_var
 
-    def encode(self, x, scale):
+    def encode(self, x, scale, traj_scale):
         self.clear_cache()
         ## cache
         t = x.shape[2]
         iter_ = 1 + (t - 1) // 4
         scale = [item.to(x.device, x.dtype) for item in scale]
+        if traj_scale is not None:
+            traj_scale = [item.to(x.device, x.dtype) for item in traj_scale]
+        ## 对encode输入的x，按时间拆分为1、4、4、4....
         for i in range(iter_):
             self._enc_conv_idx = [0]
             if i == 0:
@@ -542,7 +545,14 @@ class AutoencoderKLWan_(nn.Module):
                 1, self.z_dim, 1, 1, 1)
         else:
             mu = (mu - scale[0]) * scale[1]
-        x = torch.cat([mu, log_var], dim = 1)
+        if traj_scale is not None:
+            # apply trajectory scale
+            if isinstance(traj_scale[0], torch.Tensor):
+                mu = (mu - traj_scale[0].view(1, self.z_dim, 1, 1, 1)) * traj_scale[
+                    1].view(1, self.z_dim, 1, 1, 1)
+            else:
+                mu = (mu - traj_scale[0]) * traj_scale[1]
+        x = torch.cat([mu, log_var], dim=1)
         self.clear_cache()
         return x
     
@@ -675,15 +685,27 @@ class AutoencoderKLWan_(nn.Module):
 
         return torch.cat(outputs, dim=2)  
     
-    def decode(self, z, scale):
+    def decode(self, z, scale, traj_scale=None):
         self.clear_cache()
         # z: [b,c,t,h,w]
+        if traj_scale is not None:
+            print("Using trajectory scale for normalization")
+            traj_scale = [item.to(z.device, z.dtype) for item in traj_scale]
+            if isinstance(traj_scale[0], torch.Tensor):
+                z = z / traj_scale[1].view(1, self.z_dim, 1, 1, 1) + traj_scale[
+                    0].view(1, self.z_dim, 1, 1, 1)
+            else:
+                z = z / traj_scale[1] + traj_scale[0]
+        
         scale = [item.to(z.device, z.dtype) for item in scale]
         if isinstance(scale[0], torch.Tensor):
             z = z / scale[1].view(1, self.z_dim, 1, 1, 1) + scale[0].view(
                 1, self.z_dim, 1, 1, 1)
         else:
             z = z / scale[1] + scale[0]
+            
+
+                
         iter_ = z.shape[2]
         x = self.conv2(z)
         for i in range(iter_):
@@ -763,18 +785,22 @@ class AutoencoderKLWan(ModelMixin, ConfigMixin, FromOriginalModelMixin):
             2.8184, 1.4541, 2.3275, 2.6558, 1.2196, 1.7708, 2.6052, 2.0743,
             3.2687, 2.1526, 2.8652, 1.5579, 1.6382, 1.1253, 2.8251, 1.9160
         ]
+        self.traj_mean = torch.tensor([0.9336646795272827, -1.5638998746871948, 0.09716760367155075, -0.0003718015505000949, -0.4085753560066223, 2.252105474472046, -1.7826536893844604, 1.4354853630065918, -0.9819669127464294, -0.7372986078262329, 1.0731526613235474, -1.6012202501296997, -1.4650976657867432, -0.640479326248169, -0.23738965392112732, -1.252833604812622], dtype=torch.float32)
+        # self.traj_std = torch.tensor([0.20482811331748962, 0.45614710450172424, 0.13750170171260834, 0.25156936049461365, 0.190470352768898, 0.5001360774040222, 0.2889501452445984, 0.3690547049045563, 0.16648584604263306, 0.32076576352119446, 0.19534622132778168, 0.3663195073604584, 0.2854478657245636, 0.30236756801605225, 0.20106370747089386, 0.2414083033800125], dtype=torch.float32)
+        self.traj_std = torch.tensor([0.4107, 0.5508, 0.2565, 0.3021, 0.2372, 0.5350, 0.3000, 0.4359, 0.2033, 0.4194, 0.2107, 0.3985, 0.3314, 0.4098, 0.3906, 0.2863], dtype=torch.float32)
+        
         self.mean = torch.tensor(mean, dtype=torch.float32)
         self.std = torch.tensor(std, dtype=torch.float32)
         self.scale = [self.mean, 1.0 / self.std]
-
+        self.traj_scale = [self.traj_mean, 1.0 / self.traj_std]
         # init model
         self.model = _video_vae(
             z_dim=latent_channels,
         )
 
-    def _encode(self, x: torch.Tensor) -> torch.Tensor:
+    def _encode(self, x: torch.Tensor, use_traj_norm: bool) -> torch.Tensor:
         x = [
-            self.model.encode(u.unsqueeze(0), self.scale).squeeze(0)
+            self.model.encode(u.unsqueeze(0), self.scale, None if not use_traj_norm else self.traj_scale).squeeze(0)
             for u in x
         ]
         x = torch.stack(x)
@@ -790,9 +816,9 @@ class AutoencoderKLWan(ModelMixin, ConfigMixin, FromOriginalModelMixin):
     
     @apply_forward_hook
     def encode(
-        self, x: torch.Tensor, return_dict: bool = True
+        self, x: torch.Tensor, return_dict: bool = True, use_traj_norm :bool = False
     ) -> Union[AutoencoderKLOutput, Tuple[DiagonalGaussianDistribution]]:
-        x = self._encode(x)
+        x = self._encode(x, use_traj_norm)
 
         x = DiagonalGaussianDistribution(x)
 
@@ -822,9 +848,9 @@ class AutoencoderKLWan(ModelMixin, ConfigMixin, FromOriginalModelMixin):
 
         return DecoderOutput(sample=dec)
     
-    def _decode(self, zs):
+    def _decode(self, zs, use_traj_norm: bool = False):
         dec = [
-            self.model.decode(u.unsqueeze(0), self.scale).clamp_(-1, 1).squeeze(0)
+            self.model.decode(u.unsqueeze(0), self.scale, self.traj_scale if use_traj_norm else None).clamp_(-1, 1).squeeze(0)
             for u in zs
         ]
         dec = torch.stack(dec)
@@ -832,8 +858,8 @@ class AutoencoderKLWan(ModelMixin, ConfigMixin, FromOriginalModelMixin):
         return DecoderOutput(sample=dec)
 
     @apply_forward_hook
-    def decode(self, z: torch.Tensor, return_dict: bool = True) -> Union[DecoderOutput, torch.Tensor]:
-        z = self._decode(z).sample
+    def decode(self, z: torch.Tensor, return_dict: bool = True, use_traj_norm: bool = False) -> Union[DecoderOutput, torch.Tensor]:
+        z = self._decode(z, use_traj_norm).sample
 
         if not return_dict:
             return (z,)
