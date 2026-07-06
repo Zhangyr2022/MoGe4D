@@ -46,19 +46,19 @@ current_file_path = os.path.abspath(__file__)
 project_roots = [os.path.dirname(current_file_path), os.path.dirname(os.path.dirname(current_file_path)), os.path.dirname(os.path.dirname(os.path.dirname(current_file_path)))]
 for project_root in project_roots:
     sys.path.insert(0, project_root) if project_root not in sys.path else None
-from MoRe4D.data.bucket_sampler import (ASPECT_RATIO_512,
+from MoGe4D.data.bucket_sampler import (ASPECT_RATIO_512,
                                             ASPECT_RATIO_RANDOM_CROP_512,
                                             ASPECT_RATIO_RANDOM_CROP_PROB,
                                             AspectRatioBatchImageVideoSampler,
                                             RandomSampler, get_closest_ratio)
-from MoRe4D.data.wan_dataset import (ImageVideoSampler,ViSMDataset)
-from MoRe4D.models import (AutoencoderKLWan, CLIPModel, WanT5EncoderModel,
+from MoGe4D.data.wan_dataset import (ImageVideoSampler,ViSMDataset)
+from MoGe4D.models import (AutoencoderKLWan, CLIPModel, WanT5EncoderModel,
                                WanTransformer3DModel)
-from MoRe4D.pipeline import WanFunInpaintPipeline
-from MoRe4D.utils.discrete_sampler import DiscreteSampling
-from MoRe4D.utils.lora_utils import (create_network, merge_lora,
+from MoGe4D.pipeline import WanFunInpaintPipeline
+from MoGe4D.utils.discrete_sampler import DiscreteSampling
+from MoGe4D.utils.lora_utils import (create_network, merge_lora,
                                          unmerge_lora)
-from MoRe4D.utils.utils import get_image_to_video_latent, save_videos_grid
+from MoGe4D.utils.utils import get_image_to_video_latent, save_videos_grid
 
 if is_wandb_available():
     import wandb
@@ -1313,13 +1313,13 @@ def main():
 
     if zero_stage == 3:
         from functools import partial
-        from MoRe4D.dist import set_multi_gpus_devices, shard_model
+        from MoGe4D.dist import set_multi_gpus_devices, shard_model
         shard_fn = partial(shard_model, device_id=accelerator.device, param_dtype=weight_dtype)
         transformer3d = shard_fn(transformer3d)
 
     if fsdp_stage != 0:
         from functools import partial
-        from MoRe4D.dist import set_multi_gpus_devices, shard_model
+        from MoGe4D.dist import set_multi_gpus_devices, shard_model
         shard_fn = partial(shard_model, device_id=accelerator.device, param_dtype=weight_dtype)
         text_encoder = shard_fn(text_encoder)
 

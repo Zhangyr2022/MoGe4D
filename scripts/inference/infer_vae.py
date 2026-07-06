@@ -12,10 +12,10 @@ from pathlib import Path
 from PIL import Image
 from tqdm.auto import tqdm
 from torch_scatter import scatter
-from MoRe4D.models.wan_vae import AutoencoderKLWan
-from MoRe4D.models.trajectory_module import VAEEncoderadaptor, VAEDecoderadaptor
-from MoRe4D.utils.gaussian_splatting import gs_render
-from MoRe4D.utils.project_utils import project
+from MoGe4D.models.wan_vae import AutoencoderKLWan
+from MoGe4D.models.trajectory_module import VAEEncoderadaptor, VAEDecoderadaptor
+from MoGe4D.utils.gaussian_splatting import gs_render
+from MoGe4D.utils.project_utils import project
 
 
 def parse_args():

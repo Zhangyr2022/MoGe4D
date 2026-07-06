@@ -33,19 +33,19 @@ for project_root in project_roots:
     if project_root not in sys.path:
         sys.path.insert(0, project_root)
 
-from MoRe4D.models import (AutoencoderKLWan, WanT5EncoderModel, 
+from MoGe4D.models import (AutoencoderKLWan, WanT5EncoderModel, 
                           WanTransformer3DModel, CLIPModel, WanTransformer4DModel)
-from MoRe4D.pipeline import WanFunControlPipeline, WanFunInpaintPipeline
-from MoRe4D.utils.lora_utils import create_network, merge_lora, unmerge_lora
-from MoRe4D.utils.utils import (filter_kwargs, get_image_latent, get_video_to_video_latent, 
+from MoGe4D.pipeline import WanFunControlPipeline, WanFunInpaintPipeline
+from MoGe4D.utils.lora_utils import create_network, merge_lora, unmerge_lora
+from MoGe4D.utils.utils import (filter_kwargs, get_image_latent, get_video_to_video_latent, 
                                 save_videos_grid, get_image_to_video_latent, get_image_to_flow_video_latent)
-from MoRe4D.models.cache_utils import get_teacache_coefficients
-from MoRe4D.utils.fm_solvers import FlowDPMSolverMultistepScheduler
-from MoRe4D.utils.fm_solvers_unipc import FlowUniPCMultistepScheduler
-from MoRe4D.models.trajectory_module import VAEEncoderadaptor, VAEDecoderadaptor
-from MoRe4D.utils.project_utils import project
+from MoGe4D.models.cache_utils import get_teacache_coefficients
+from MoGe4D.utils.fm_solvers import FlowDPMSolverMultistepScheduler
+from MoGe4D.utils.fm_solvers_unipc import FlowUniPCMultistepScheduler
+from MoGe4D.models.trajectory_module import VAEEncoderadaptor, VAEDecoderadaptor
+from MoGe4D.utils.project_utils import project
 from unidepth.models import UniDepthV2old
-from MoRe4D.utils.gaussian_splatting import gs_render
+from MoGe4D.utils.gaussian_splatting import gs_render
 
 # Constants
 TRAJECTORY_TYPES = ["mix1", "mix2", "surrounding", "anti-surrounding", "circular", 
@@ -687,19 +687,19 @@ def _setup_pipeline_memory_optimization(pipeline, transformer, args, device, wei
     gpu_memory_mode = getattr(args, 'gpu_memory_mode', 'model_full_load')
     
     if gpu_memory_mode == "sequential_cpu_offload":
-        from MoRe4D.utils.fp8_optimization import replace_parameters_by_name
+        from MoGe4D.utils.fp8_optimization import replace_parameters_by_name
         replace_parameters_by_name(transformer, ["modulation"], device=device)
         transformer.freqs = transformer.freqs.to(device=device)
         pipeline.enable_sequential_cpu_offload(device=device)
     elif gpu_memory_mode == "model_cpu_offload_and_qfloat8":
-        from MoRe4D.utils.fp8_optimization import convert_model_weight_to_float8, convert_weight_dtype_wrapper
+        from MoGe4D.utils.fp8_optimization import convert_model_weight_to_float8, convert_weight_dtype_wrapper
         convert_model_weight_to_float8(transformer, exclude_module_name=["modulation"], device=device)
         convert_weight_dtype_wrapper(transformer, weight_dtype)
         pipeline.enable_model_cpu_offload(device=device)
     elif gpu_memory_mode == "model_cpu_offload":
         pipeline.enable_model_cpu_offload(device=device)
     elif gpu_memory_mode == "model_full_load_and_qfloat8":
-        from MoRe4D.utils.fp8_optimization import convert_model_weight_to_float8, convert_weight_dtype_wrapper
+        from MoGe4D.utils.fp8_optimization import convert_model_weight_to_float8, convert_weight_dtype_wrapper
         convert_model_weight_to_float8(transformer, exclude_module_name=["modulation"], device=device)
         convert_weight_dtype_wrapper(transformer, weight_dtype)
         pipeline.to(device=device)
@@ -767,7 +767,7 @@ def load_stage2_models(args, logger):
     if args.gpu_memory_mode == "model_cpu_offload":
         pipeline.enable_model_cpu_offload(device=device)
     elif args.gpu_memory_mode == "sequential_cpu_offload":
-        from MoRe4D.utils.fp8_optimization import replace_parameters_by_name
+        from MoGe4D.utils.fp8_optimization import replace_parameters_by_name
         replace_parameters_by_name(transformer, ["modulation"], device=device)
         transformer.freqs = transformer.freqs.to(device=device)
         pipeline.enable_sequential_cpu_offload(device=device)

@@ -40,25 +40,25 @@ from tqdm.auto import tqdm
 from transformers import AutoTokenizer
 from transformers.utils import ContextManagers
 import datasets
-from MoRe4D.data.bucket_sampler import (ASPECT_RATIO_512,
+from MoGe4D.data.bucket_sampler import (ASPECT_RATIO_512,
                                             ASPECT_RATIO_RANDOM_CROP_512,
                                             ASPECT_RATIO_RANDOM_CROP_PROB,
                                             AspectRatioBatchImageVideoSampler,
                                             RandomSampler, get_closest_ratio)
-from MoRe4D.data.wan_dataset import (STraGDataset,
+from MoGe4D.data.wan_dataset import (STraGDataset,
                                                  ImageVideoSampler,
                                                  get_random_mask,
                                                  process_pose_params)
 
-from MoRe4D.models.trajectory_module import VAEEncoderadaptor, VAEDecoderadaptor
+from MoGe4D.models.trajectory_module import VAEEncoderadaptor, VAEDecoderadaptor
 
-from MoRe4D.models import (AutoencoderKLWan, CLIPModel, WanT5EncoderModel,
+from MoGe4D.models import (AutoencoderKLWan, CLIPModel, WanT5EncoderModel,
                                WanTransformer3DModel,WanTransformer4DModel)
-from MoRe4D.pipeline import WanFunControlPipeline
-from MoRe4D.utils.discrete_sampler import DiscreteSampling
-from MoRe4D.utils.lora_utils import (create_network, merge_lora,
+from MoGe4D.pipeline import WanFunControlPipeline
+from MoGe4D.utils.discrete_sampler import DiscreteSampling
+from MoGe4D.utils.lora_utils import (create_network, merge_lora,
                                          unmerge_lora)
-from MoRe4D.utils.utils import (get_image_to_video_latent,
+from MoGe4D.utils.utils import (get_image_to_video_latent,
                                     get_video_to_video_latent,
                                     save_videos_grid)
 
@@ -1510,7 +1510,7 @@ def main():
 
     if fsdp_stage != 0:
         from functools import partial
-        from MoRe4D.dist import set_multi_gpus_devices, shard_model
+        from MoGe4D.dist import set_multi_gpus_devices, shard_model
         shard_fn = partial(shard_model, device_id=accelerator.device, param_dtype=weight_dtype)
         text_encoder = shard_fn(text_encoder)
 

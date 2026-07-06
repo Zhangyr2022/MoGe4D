@@ -25,9 +25,9 @@ from diffusers.utils.torch_utils import is_compiled_module
 from PIL import Image
 from tqdm.auto import tqdm
 from torch.utils.tensorboard import SummaryWriter
-from MoRe4D.models.wan_vae import AutoencoderKLWan
-from MoRe4D.models.trajectory_module import VAEEncoderadaptor, VAEDecoderadaptor
-from MoRe4D.data.vae_dataset import VAEDataset
+from MoGe4D.models.wan_vae import AutoencoderKLWan
+from MoGe4D.models.trajectory_module import VAEEncoderadaptor, VAEDecoderadaptor
+from MoGe4D.data.vae_dataset import VAEDataset
 
 logger = get_logger(__name__)
 
@@ -189,7 +189,7 @@ def compute_loss(reconstructions, targets, posterior, args):
 
 def create_projected_video(data, reconstructions, args, accelerator, H_ori=720, W_ori=960, H=368, W=512):
     """Create projected video from 3D coordinates."""
-    from MoRe4D.utils.project_utils import project
+    from MoGe4D.utils.project_utils import project
     from torch_scatter import scatter
     
     # Calculate intrinsic parameters
